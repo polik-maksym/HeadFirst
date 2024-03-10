@@ -8,6 +8,12 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Threading;
+using System.Windows.Threading;
+
+#pragma warning disable CS8618 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 
 namespace MatchGame
 {
@@ -16,10 +22,28 @@ namespace MatchGame
     /// </summary>
     public partial class MainWindow : Window
     {
+        DispatcherTimer timer = new DispatcherTimer();
+        int tenthsOfSecondsElapsed;
+        int matchesFound;
+
+
         public MainWindow()
         {
             InitializeComponent();
+            timer.Interval = TimeSpan.FromSeconds(.1);
+            timer.Tick += Timer_Tick;
             SetUpGame();
+        }
+
+        private void Timer_Tick(object? sender, EventArgs e)
+        {
+            tenthsOfSecondsElapsed++;
+            timeTextBlock.Text = (tenthsOfSecondsElapsed / 10.0F).ToString("0.0s");
+            if(matchesFound == 8)
+            {
+                timer.Stop();
+                timeTextBlock.Text = timeTextBlock.Text + " - Play Again ? ";
+            }
         }
 
         private void SetUpGame()
@@ -40,12 +64,57 @@ namespace MatchGame
 
             foreach (TextBlock textBlock in mainGrid.Children.OfType<TextBlock>())
             {
-                int index = rnd.Next(animalEmoji.Count);
-                string animalNext = animalEmoji[index];
-                animalEmoji.RemoveAt(index);
-                textBlock.Text = animalNext;
+                if(textBlock.Name != "timeTextBlock")
+                {
+                    textBlock.Visibility = Visibility.Visible;
+                    int index = rnd.Next(animalEmoji.Count);
+                    string nextEmoji = animalEmoji[index];
+                    textBlock.Text = nextEmoji;
+                    animalEmoji.RemoveAt(index);
+                }        
             }
 
+            timer.Start();
+            tenthsOfSecondsElapsed = 0;
+            matchesFound = 0;
+
+        }
+
+        TextBlock lastTextBlockCliked;
+        bool findingMatch = false;
+        private void TextBlock_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+            TextBlock textBlock = sender as TextBlock;
+
+            if (findingMatch == false)
+            {
+
+                textBlock.Visibility = Visibility.Hidden;
+                lastTextBlockCliked = textBlock;
+                findingMatch = true;
+                
+
+            }
+            else if(textBlock.Text == lastTextBlockCliked.Text)
+            {
+                textBlock.Visibility= Visibility.Hidden;
+                findingMatch = false;
+                matchesFound++;
+            }
+            else
+            {
+                lastTextBlockCliked.Visibility = Visibility.Visible;
+                findingMatch= false;
+            }
+        }
+
+        private void TimeTextBlock_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (matchesFound == 8)
+            {
+                SetUpGame();
+            }
         }
     }
 }
